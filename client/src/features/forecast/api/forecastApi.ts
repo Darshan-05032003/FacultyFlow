@@ -9,5 +9,5 @@ export const getWorkloadForecast = async (filters: ForecastFilters) => {
   if (filters.horizon) params.append('horizon', filters.horizon.toString());
 
   const res = await api.get(`/workload/forecast?${params.toString()}`);
-  return res.data;
+  return res;
 };

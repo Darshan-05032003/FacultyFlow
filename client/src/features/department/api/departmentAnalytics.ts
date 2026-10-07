@@ -15,5 +15,5 @@ export const getDepartmentAnalytics = async (filters: DepartmentWorkloadFilters)
   if (filters.status) params.append('status', filters.status);
 
   const res = await api.get(`/departments/analytics?${params.toString()}`);
-  return res.data;
+  return res;
 };

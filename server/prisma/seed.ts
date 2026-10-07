@@ -3,6 +3,17 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Helper: add days to today
+function daysFromToday(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setHours(10, 0, 0, 0);
+  return d;
+}
+function daysAgo(n: number): Date {
+  return daysFromToday(-n);
+}
+
 async function main() {
   console.log('🌱  Seeding FacultyFlow demo data...');
 
@@ -21,7 +32,7 @@ async function main() {
     create: { name: 'Information Technology', code: 'IT' },
   });
 
-  const mecDept = await prisma.department.upsert({
+  await prisma.department.upsert({
     where: { code: 'MECH' },
     update: {},
     create: { name: 'Mechanical Engineering', code: 'MECH' },
@@ -88,7 +99,7 @@ async function main() {
     });
   }
 
-  // Faculty 1 — CE
+  // Faculty 1 — Primary Demo (Prof. Rahul Mehta)
   const faculty1 = await prisma.user.upsert({
     where: { email: 'faculty.demo@facultyflow.local' },
     update: {},
@@ -106,75 +117,48 @@ async function main() {
           employeeId: 'CE-FAC-001',
           phone: '+91-98765-12340',
           officeLocation: 'CE Block, Room 102',
-          bio: 'Specializes in Databases and Web Technologies.',
+          bio: 'Specializes in Databases and Web Technologies. 8 years experience.',
         },
       },
     },
     include: { facultyProfile: true },
   });
 
-  // Faculty 2 — CE
-  const faculty2 = await prisma.user.upsert({
-    where: { email: 'faculty2.demo@facultyflow.local' },
-    update: {},
-    create: {
-      name: 'Prof. Priya Patel',
-      email: 'faculty2.demo@facultyflow.local',
-      passwordHash: hash,
-      role: Role.FACULTY,
-      facultyProfile: {
-        create: {
-          firstName: 'Prof. Priya',
-          lastName: 'Patel',
-          designation: 'Associate Professor',
-          departmentId: ceDept.id,
-          employeeId: 'CE-FAC-002',
-        },
-      },
-    },
-    include: { facultyProfile: true },
-  });
+  // Additional Faculty members for HOD Dashboard
+  const facultyNames = [
+    { name: 'Dr. Anjali Sharma', email: 'faculty2.demo@facultyflow.local', empId: 'CE-FAC-D02', desig: 'Associate Professor' },
+    { name: 'Dr. Suresh Patil', email: 'faculty3.demo@facultyflow.local', empId: 'IT-FAC-D01', desig: 'Assistant Professor' },
+    { name: 'Dr. Rekha Desai', email: 'faculty4.demo@facultyflow.local', empId: 'CE-FAC-D03', desig: 'Assistant Professor' },
+    { name: 'Dr. Prakash Joshi', email: 'faculty5.demo@facultyflow.local', empId: 'CE-FAC-D04', desig: 'Associate Professor' },
+    { name: 'Dr. Kavita Kulkarni', email: 'faculty6.demo@facultyflow.local', empId: 'CE-FAC-D05', desig: 'Assistant Professor' },
+    { name: 'Dr. Mohan Gupta', email: 'faculty7.demo@facultyflow.local', empId: 'CE-FAC-D06', desig: 'Professor' },
+    { name: 'Dr. Neha Verma', email: 'faculty8.demo@facultyflow.local', empId: 'CE-FAC-D07', desig: 'Assistant Professor' },
+    { name: 'Dr. Tejinder Singh', email: 'faculty9.demo@facultyflow.local', empId: 'CE-FAC-D08', desig: 'Associate Professor' },
+    { name: 'Dr. Lata Yadav', email: 'faculty10.demo@facultyflow.local', empId: 'CE-FAC-D09', desig: 'Assistant Professor' },
+  ];
 
-  // Faculty 3 — IT
-  const faculty3 = await prisma.user.upsert({
-    where: { email: 'faculty3.demo@facultyflow.local' },
-    update: {},
-    create: {
-      name: 'Prof. Vijay Kumar',
-      email: 'faculty3.demo@facultyflow.local',
-      passwordHash: hash,
-      role: Role.FACULTY,
-      facultyProfile: {
-        create: {
-          firstName: 'Prof. Vijay',
-          lastName: 'Kumar',
-          designation: 'Assistant Professor',
-          departmentId: itDept.id,
-          employeeId: 'IT-FAC-001',
-        },
-      },
-    },
-    include: { facultyProfile: true },
-  });
-
-  // Additional Faculties for Data Heavy HOD Dashboard
   const extraFaculties = [];
-  for (let i = 4; i <= 8; i++) {
+  for (const fn of facultyNames) {
+    // Check if profile with this empId already exists and clear it first
+    await prisma.facultyProfile.updateMany({
+      where: { employeeId: fn.empId },
+      data: { employeeId: null },
+    });
     const fac = await prisma.user.upsert({
-      where: { email: `faculty${i}.demo@facultyflow.local` },
+      where: { email: fn.email },
       update: {},
       create: {
-        name: `Prof. Demo Faculty ${i}`,
-        email: `faculty${i}.demo@facultyflow.local`,
+        name: fn.name,
+        email: fn.email,
         passwordHash: hash,
         role: Role.FACULTY,
         facultyProfile: {
           create: {
-            firstName: `Prof. Demo`,
-            lastName: `Faculty ${i}`,
-            designation: 'Assistant Professor',
-            departmentId: ceDept.id, // Adding to CE to make HOD Dashboard rich
-            employeeId: `CE-FAC-00${i}`,
+            firstName: fn.name.split(' ')[0] + ' ' + fn.name.split(' ')[1],
+            lastName: fn.name.split(' ').slice(2).join(' '),
+            designation: fn.desig,
+            departmentId: ceDept.id,
+            employeeId: fn.empId,
           },
         },
       },
@@ -186,122 +170,156 @@ async function main() {
   console.log('  ✅ Users created');
 
   // --------------------------------------------------
-  // 3. Activities — generate realistic historical data
+  // 3. Activities
   // --------------------------------------------------
-  const faculties = [
-    { profile: hodUser.facultyProfile!, label: 'HOD' },
-    { profile: faculty1.facultyProfile!, label: 'Faculty1' },
-    { profile: faculty2.facultyProfile!, label: 'Faculty2' },
-    { profile: faculty3.facultyProfile!, label: 'Faculty3' },
-    ...extraFaculties.map((f, i) => ({ profile: f.facultyProfile!, label: `Faculty${i + 4}` })),
-  ];
 
-  const categories: { category: ActivityCategory; est: number; label: string }[] = [
-    { category: ActivityCategory.TEACHING, est: 60, label: 'DBMS Lecture' },
-    { category: ActivityCategory.TEACHING, est: 60, label: 'Algorithm Lecture' },
-    { category: ActivityCategory.PREPARATION, est: 45, label: 'Lecture Preparation' },
-    { category: ActivityCategory.EVALUATION, est: 90, label: 'Assignment Evaluation' },
-    { category: ActivityCategory.RESEARCH, est: 120, label: 'Research Work' },
-    { category: ActivityCategory.MEETING, est: 60, label: 'Department Meeting' },
-    { category: ActivityCategory.MENTORING, est: 30, label: 'Student Mentoring' },
-    { category: ActivityCategory.ADMINISTRATION, est: 45, label: 'Administrative Task' },
-    { category: ActivityCategory.PROJECT_SUPERVISION, est: 60, label: 'Project Supervision' },
-    { category: ActivityCategory.LABORATORY, est: 120, label: 'Lab Session' },
-  ];
+  // Delete old demo activities for fresh start
+  const allProfileIds = [
+    admin.facultyProfile?.id,
+    hodUser.facultyProfile?.id,
+    faculty1.facultyProfile?.id,
+    ...extraFaculties.map(f => f.facultyProfile?.id),
+  ].filter(Boolean) as string[];
 
-  // Delete old demo activities to avoid duplicates
-  const allProfileIds = faculties.map(f => f.profile.id);
   await prisma.activity.deleteMany({
     where: { facultyProfileId: { in: allProfileIds } },
   });
 
-  const today = new Date();
-  const activityData: any[] = [];
+  const f1ProfileId = faculty1.facultyProfile!.id;
 
-  // Generate 90 days of historical activities
-  for (let daysAgo = 89; daysAgo >= 0; daysAgo--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - daysAgo);
-    const dayOfWeek = date.getDay();
+  // -------------------------------------------------------
+  // Faculty 1 (Prof. Rahul Mehta) — Specific rich activities
+  // -------------------------------------------------------
+  const faculty1Activities = [
+    // === COMPLETED Historical (Sept 2026) ===
+    { title: 'DBMS Lecture - Unit 1', category: ActivityCategory.TEACHING, date: daysAgo(28), estimatedMinutes: 60, actualMinutes: 65, status: ActivityStatus.COMPLETED },
+    { title: 'DBMS Lecture - Unit 2', category: ActivityCategory.TEACHING, date: daysAgo(26), estimatedMinutes: 60, actualMinutes: 70, status: ActivityStatus.COMPLETED },
+    { title: 'Data Structures Lecture', category: ActivityCategory.TEACHING, date: daysAgo(25), estimatedMinutes: 60, actualMinutes: 55, status: ActivityStatus.COMPLETED },
+    { title: 'DBMS Lecture Preparation', category: ActivityCategory.PREPARATION, date: daysAgo(24), estimatedMinutes: 90, actualMinutes: 100, status: ActivityStatus.COMPLETED },
+    { title: 'Lab Assignment Evaluation', category: ActivityCategory.EVALUATION, date: daysAgo(23), estimatedMinutes: 180, actualMinutes: 210, status: ActivityStatus.COMPLETED },
+    { title: 'Operating Systems Lecture', category: ActivityCategory.TEACHING, date: daysAgo(22), estimatedMinutes: 60, actualMinutes: 60, status: ActivityStatus.COMPLETED },
+    { title: 'Research Paper Reading', category: ActivityCategory.RESEARCH, date: daysAgo(21), estimatedMinutes: 120, actualMinutes: 135, status: ActivityStatus.COMPLETED },
+    { title: 'Department Meeting', category: ActivityCategory.MEETING, date: daysAgo(20), estimatedMinutes: 90, actualMinutes: 80, status: ActivityStatus.COMPLETED },
+    { title: 'Unit 1 Lab Session', category: ActivityCategory.LABORATORY, date: daysAgo(19), estimatedMinutes: 120, actualMinutes: 125, status: ActivityStatus.COMPLETED },
+    { title: 'Assignment Evaluation', category: ActivityCategory.EVALUATION, date: daysAgo(18), estimatedMinutes: 150, actualMinutes: 160, status: ActivityStatus.COMPLETED },
+    { title: 'Computer Networks Lecture', category: ActivityCategory.TEACHING, date: daysAgo(17), estimatedMinutes: 60, actualMinutes: 65, status: ActivityStatus.COMPLETED },
+    { title: 'Unit 2 Lecture Notes', category: ActivityCategory.PREPARATION, date: daysAgo(16), estimatedMinutes: 120, actualMinutes: 130, status: ActivityStatus.COMPLETED },
+    { title: 'Student Mentoring Session', category: ActivityCategory.MENTORING, date: daysAgo(15), estimatedMinutes: 60, actualMinutes: 75, status: ActivityStatus.COMPLETED },
+    { title: 'Software Engineering Lecture', category: ActivityCategory.TEACHING, date: daysAgo(14), estimatedMinutes: 60, actualMinutes: 60, status: ActivityStatus.COMPLETED },
+    { title: 'Literature Review - ML Paper', category: ActivityCategory.RESEARCH, date: daysAgo(13), estimatedMinutes: 150, actualMinutes: 160, status: ActivityStatus.COMPLETED },
+    { title: 'Attendance Review & Documentation', category: ActivityCategory.ADMINISTRATION, date: daysAgo(12), estimatedMinutes: 60, actualMinutes: 55, status: ActivityStatus.COMPLETED },
+    { title: 'DBMS Lecture - Unit 3', category: ActivityCategory.TEACHING, date: daysAgo(11), estimatedMinutes: 60, actualMinutes: 70, status: ActivityStatus.COMPLETED },
+    { title: 'Lab Manual Preparation', category: ActivityCategory.PREPARATION, date: daysAgo(10), estimatedMinutes: 180, actualMinutes: 195, status: ActivityStatus.COMPLETED },
+    { title: 'Internal Assessment Review', category: ActivityCategory.EVALUATION, date: daysAgo(9), estimatedMinutes: 120, actualMinutes: 130, status: ActivityStatus.COMPLETED },
+    { title: 'Project Guidance - Group A', category: ActivityCategory.PROJECT_SUPERVISION, date: daysAgo(8), estimatedMinutes: 90, actualMinutes: 100, status: ActivityStatus.COMPLETED },
+    { title: 'Faculty Coordination Meeting', category: ActivityCategory.MEETING, date: daysAgo(7), estimatedMinutes: 60, actualMinutes: 55, status: ActivityStatus.COMPLETED },
+    // === IN_PROGRESS (Current Week) ===
+    { title: 'Midterm Paper Evaluation', category: ActivityCategory.EVALUATION, date: daysAgo(4), estimatedMinutes: 240, actualMinutes: 120, status: ActivityStatus.IN_PROGRESS, deadline: daysAgo(1) }, // Overdue -> CRITICAL
+    { title: 'Research Paper Draft - IEEE Access', category: ActivityCategory.RESEARCH, date: daysAgo(3), estimatedMinutes: 300, actualMinutes: 150, status: ActivityStatus.IN_PROGRESS, deadline: daysFromToday(1) }, // Due tomorrow -> HIGH
+    { title: 'Data Structures Lab Session', category: ActivityCategory.LABORATORY, date: daysAgo(2), estimatedMinutes: 120, actualMinutes: null, status: ActivityStatus.IN_PROGRESS, deadline: daysFromToday(2) }, // Due in 2 days -> HIGH
+    // === PLANNED Future (HIGH priority — deadline soon) ===
+    { title: 'Unit 4 Lecture Notes Preparation', category: ActivityCategory.PREPARATION, date: daysFromToday(1), estimatedMinutes: 240, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(1) }, // Due tomorrow + 240 mins -> HIGH
+    { title: 'Lab Assignment Evaluation - Batch B', category: ActivityCategory.EVALUATION, date: daysFromToday(2), estimatedMinutes: 210, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(3) }, // Due in 3 days -> MEDIUM/HIGH
+    { title: 'DBMS Lecture - Unit 4', category: ActivityCategory.TEACHING, date: daysFromToday(3), estimatedMinutes: 60, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(3) },
+    // === PLANNED Future (MEDIUM priority) ===
+    { title: 'Project Review Meeting', category: ActivityCategory.MEETING, date: daysFromToday(5), estimatedMinutes: 90, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(6) },
+    { title: 'Question Paper Preparation - Midterm 2', category: ActivityCategory.PREPARATION, date: daysFromToday(6), estimatedMinutes: 180, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(7) },
+    { title: 'Student Project Review - Final Year', category: ActivityCategory.PROJECT_SUPERVISION, date: daysFromToday(7), estimatedMinutes: 120, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(10) },
+    { title: 'Computer Networks Lab Demonstration', category: ActivityCategory.LABORATORY, date: daysFromToday(8), estimatedMinutes: 120, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(12) },
+    // === PLANNED Future (LOW priority) ===
+    { title: 'Course File Preparation & Audit', category: ActivityCategory.ADMINISTRATION, date: daysFromToday(10), estimatedMinutes: 120, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(20) },
+    { title: 'Dataset Analysis for Research Grant', category: ActivityCategory.RESEARCH, date: daysFromToday(12), estimatedMinutes: 180, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(25) },
+    { title: 'Final Year Student Mentoring Session', category: ActivityCategory.MENTORING, date: daysFromToday(14), estimatedMinutes: 90, actualMinutes: null, status: ActivityStatus.PLANNED, deadline: daysFromToday(28) },
+  ];
 
-    // Skip Sundays (0), lighter on Saturdays (6)
-    if (dayOfWeek === 0) continue;
+  const f1Data = faculty1Activities.map(a => ({ ...a, facultyProfileId: f1ProfileId, description: `${a.title} - Academic Semester 2026-27` }));
+  await prisma.activity.createMany({ data: f1Data });
+  console.log(`  ✅ ${f1Data.length} activities created for Prof. Rahul Mehta`);
 
-    for (const fac of faculties) {
-      // How many activities per day: 3 to 6 on weekdays to make it data heavy
-      const activitiesPerDay = dayOfWeek === 6 ? 2 : Math.floor(Math.random() * 4) + 3;
+  // -------------------------------------------------------
+  // HOD + Extra Faculty — bulk activities for HOD dashboard
+  // -------------------------------------------------------
+  const bulkFaculties = [
+    { profile: hodUser.facultyProfile!, label: 'HOD' },
+    ...extraFaculties.map((f, i) => ({ profile: f.facultyProfile!, label: `ExtraFac${i + 1}` })),
+  ];
 
-      for (let i = 0; i < activitiesPerDay; i++) {
-        const template = categories[Math.floor(Math.random() * categories.length)];
-        const est = template.est + Math.floor(Math.random() * 30) - 15;
-        const actual = daysAgo > 7 
-          ? est + Math.floor(Math.random() * 30) - 10
-          : (Math.random() > 0.5 ? est + Math.floor(Math.random() * 20) - 5 : null);
-        const status: ActivityStatus = daysAgo > 7 
-          ? (Math.random() > 0.1 ? ActivityStatus.COMPLETED : ActivityStatus.CANCELLED)
-          : (Math.random() > 0.6 ? ActivityStatus.COMPLETED : Math.random() > 0.5 ? ActivityStatus.IN_PROGRESS : ActivityStatus.PLANNED);
+  const bulkCategories: { category: ActivityCategory; est: number; title: string }[] = [
+    { category: ActivityCategory.TEACHING, est: 60, title: 'Lecture Session' },
+    { category: ActivityCategory.TEACHING, est: 60, title: 'Tutorial Class' },
+    { category: ActivityCategory.PREPARATION, est: 90, title: 'Lecture Preparation' },
+    { category: ActivityCategory.EVALUATION, est: 120, title: 'Assignment Evaluation' },
+    { category: ActivityCategory.RESEARCH, est: 150, title: 'Research Activity' },
+    { category: ActivityCategory.MEETING, est: 60, title: 'Department Meeting' },
+    { category: ActivityCategory.MENTORING, est: 45, title: 'Student Mentoring' },
+    { category: ActivityCategory.ADMINISTRATION, est: 60, title: 'Administrative Task' },
+    { category: ActivityCategory.PROJECT_SUPERVISION, est: 90, title: 'Project Supervision' },
+    { category: ActivityCategory.LABORATORY, est: 120, title: 'Lab Session' },
+  ];
 
-        activityData.push({
+  const bulkData: any[] = [];
+  for (const fac of bulkFaculties) {
+    // Historical: 60 days back
+    for (let dAgo = 60; dAgo >= 1; dAgo--) {
+      const date = daysAgo(dAgo);
+      if (date.getDay() === 0) continue; // skip Sundays
+      const perDay = date.getDay() === 6 ? 2 : 4; // sat=2, weekday=4
+      for (let i = 0; i < perDay; i++) {
+        const tmpl = bulkCategories[i % bulkCategories.length];
+        const variation = (i % 3) * 10;
+        const est = tmpl.est + variation;
+        const actual = est + ((i % 2 === 0) ? 10 : -5);
+        bulkData.push({
           facultyProfileId: fac.profile.id,
-          title: template.label + (i > 0 ? ` - Session ${i + 1}` : ''),
-          category: template.category,
+          title: `${tmpl.title}`,
+          category: tmpl.category,
           date: new Date(date),
-          estimatedMinutes: Math.max(15, est),
-          actualMinutes: actual ? Math.max(15, actual) : null,
-          status,
-          description: `${template.label} session for the academic semester.`,
+          estimatedMinutes: est,
+          actualMinutes: actual,
+          status: ActivityStatus.COMPLETED,
+          description: `${tmpl.title} session`,
         });
       }
     }
-  }
-
-  // Future activities (upcoming, 30 days forward)
-  for (let daysFwd = 1; daysFwd <= 30; daysFwd++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + daysFwd);
-    if (date.getDay() === 0) continue;
-
-    for (const fac of faculties) {
-      // 3 to 6 activities per day for future as well
-      const activitiesPerDay = date.getDay() === 6 ? 2 : Math.floor(Math.random() * 4) + 3;
-      for (let i = 0; i < activitiesPerDay; i++) {
-        const template = categories[Math.floor(Math.random() * categories.length)];
-        const est = template.est + Math.floor(Math.random() * 20) - 10;
-        const deadline = Math.random() > 0.7 ? new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
-        activityData.push({
+    // Future: 14 days forward
+    for (let dFwd = 1; dFwd <= 14; dFwd++) {
+      const date = daysFromToday(dFwd);
+      if (date.getDay() === 0) continue;
+      const perDay = 3;
+      for (let i = 0; i < perDay; i++) {
+        const tmpl = bulkCategories[i % bulkCategories.length];
+        bulkData.push({
           facultyProfileId: fac.profile.id,
-          title: template.label,
-          category: template.category,
+          title: tmpl.title,
+          category: tmpl.category,
           date: new Date(date),
-          estimatedMinutes: Math.max(15, est),
+          estimatedMinutes: tmpl.est,
           actualMinutes: null,
           status: ActivityStatus.PLANNED,
-          deadline,
+          deadline: i === 0 ? daysFromToday(dFwd + 7) : null,
+          description: `${tmpl.title} session`,
         });
       }
     }
   }
 
-  // Bulk insert in chunks to avoid hitting limits
-  const chunkSize = 100;
-  for (let i = 0; i < activityData.length; i += chunkSize) {
-    await prisma.activity.createMany({ data: activityData.slice(i, i + chunkSize) });
+  const chunkSize = 200;
+  for (let i = 0; i < bulkData.length; i += chunkSize) {
+    await prisma.activity.createMany({ data: bulkData.slice(i, i + chunkSize) });
   }
-
-  console.log(`  ✅ ${activityData.length} activities created`);
+  console.log(`  ✅ ${bulkData.length} activities created for HOD + extra faculties`);
 
   // --------------------------------------------------
   // 4. Summary
   // --------------------------------------------------
   console.log('\n📋 Demo Accounts:');
-  console.log('  ┌─────────────────────────────────────────────────────┐');
-  console.log('  │ Role    │ Email                          │ Password   │');
-  console.log('  ├─────────────────────────────────────────────────────┤');
-  console.log('  │ ADMIN   │ admin.demo@facultyflow.local   │ FacultyFlow@123 │');
-  console.log('  │ HOD     │ hod.demo@facultyflow.local     │ FacultyFlow@123 │');
-  console.log('  │ FACULTY │ faculty.demo@facultyflow.local │ FacultyFlow@123 │');
-  console.log('  │ FACULTY │ faculty2.demo@facultyflow.local│ FacultyFlow@123 │');
-  console.log('  └─────────────────────────────────────────────────────┘');
+  console.log('  ┌──────────────────────────────────────────────────────────┐');
+  console.log('  │ Role    │ Email                           │ Password        │');
+  console.log('  ├──────────────────────────────────────────────────────────┤');
+  console.log('  │ ADMIN   │ admin.demo@facultyflow.local    │ FacultyFlow@123 │');
+  console.log('  │ HOD     │ hod.demo@facultyflow.local      │ FacultyFlow@123 │');
+  console.log('  │ FACULTY │ faculty.demo@facultyflow.local  │ FacultyFlow@123 │');
+  console.log('  └──────────────────────────────────────────────────────────┘');
   console.log('\n✅ Seeding complete!');
 }
 

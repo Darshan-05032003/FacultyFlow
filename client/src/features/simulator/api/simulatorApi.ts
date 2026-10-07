@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../../../lib/api';
 
 export type SimulatorActionType = 'ADD_ACTIVITY' | 'MOVE_ACTIVITY' | 'CHANGE_DURATION' | 'REMOVE_ACTIVITY';
 
@@ -30,6 +30,9 @@ export interface SimulatorResponse {
 }
 
 export const simulateWorkload = async (scenario: SimulatorAction): Promise<SimulatorResponse> => {
-  const response = await axios.post('/api/v1/workload/simulate', { scenario });
-  return response.data.data;
+  const response = await api.post('/workload/simulate', { scenario });
+  const raw = (response as any)?.data;
+  if (raw && 'baseline' in raw) return raw;
+  if (response && 'baseline' in response) return response as any;
+  return raw || response;
 };

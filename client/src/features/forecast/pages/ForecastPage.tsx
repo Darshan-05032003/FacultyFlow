@@ -57,7 +57,7 @@ export default function ForecastPage() {
     </div>
   );
 
-  const forecast = data?.data;
+  const forecast = (data as any)?.data || (data && 'dailyForecast' in (data as any) ? data : null);
   if (!forecast) return (
     <div className="space-y-6">
       <PageHeader title="Workload Forecast" />
@@ -65,22 +65,28 @@ export default function ForecastPage() {
     </div>
   );
 
-  const { summary, upcomingOverloadPeriods, dailyProjections, categoryProjections, insights } = forecast;
+  const { 
+    summary = { scheduledMinutes: 0, baselineMinutes: 0, projectedMinutes: 0, projectedHours: 0, projectedUtilization: 0, workloadStatus: 'NORMAL' }, 
+    upcomingOverloadPeriods = [], 
+    dailyForecast = [], 
+    categoryForecast = [], 
+    insights = [] 
+  } = forecast;
 
   const trendData = chartView === 'daily' || appliedHorizon <= 14
-    ? dailyProjections.map((d: any) => ({
+    ? (dailyForecast || []).map((d: any) => ({
         name: new Date(d.date).toLocaleDateString(undefined, {month:'short', day:'numeric'}),
         projected: Math.round(d.projectedMinutes/60*10)/10,
         scheduled: Math.round(d.scheduledMinutes/60*10)/10,
         baseline: Math.round(d.baselineMinutes/60*10)/10
       }))
-    : dailyProjections.reduce((acc: any[], curr: any, idx: number) => {
+    : (dailyForecast || []).reduce((acc: any[], curr: any, idx: number) => {
         const weekIdx = Math.floor(idx / 7);
         if (!acc[weekIdx]) acc[weekIdx] = { name: `Week ${weekIdx + 1}`, projected: 0, scheduled: 0, baseline: 0 };
         acc[weekIdx].projected += curr.projectedMinutes;
         acc[weekIdx].scheduled += curr.scheduledMinutes;
         acc[weekIdx].baseline += curr.baselineMinutes;
-        if (idx === dailyProjections.length - 1 || (idx + 1) % 7 === 0) {
+        if (idx === (dailyForecast || []).length - 1 || (idx + 1) % 7 === 0) {
           acc[weekIdx].projected = Math.round(acc[weekIdx].projected/60*10)/10;
           acc[weekIdx].scheduled = Math.round(acc[weekIdx].scheduled/60*10)/10;
           acc[weekIdx].baseline = Math.round(acc[weekIdx].baseline/60*10)/10;
@@ -88,7 +94,7 @@ export default function ForecastPage() {
         return acc;
       }, []);
 
-  const categoryBarData = categoryProjections.map((c: any) => ({
+  const categoryBarData = (categoryForecast || []).map((c: any) => ({
     name: ActivityCategoryLabels[c.category] || c.category,
     projected: Math.round(c.projectedMinutes / 60 * 10) / 10,
     scheduled: Math.round(c.scheduledMinutes / 60 * 10) / 10

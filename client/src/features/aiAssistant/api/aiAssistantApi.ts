@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../../../lib/api';
 
 export interface AIResponse {
   isFallback: boolean;
@@ -9,6 +9,6 @@ export interface AIResponse {
 }
 
 export const askAssistant = async (message: string): Promise<AIResponse> => {
-  const response = await axios.post('/api/v1/ai/assistant', { message });
-  return response.data.data;
+  const response = await api.post('/ai/assistant', { message });
+  return (response as any).data;
 };

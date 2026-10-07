@@ -1,12 +1,12 @@
 import api from '../../../lib/api';
 
-export const getActivities = async (filters: any) => {
+export const getActivities = async (filters: any = {}) => {
   const params = new URLSearchParams();
-  if (filters.category) params.append('category', filters.category);
-  if (filters.status) params.append('status', filters.status);
-  if (filters.search) params.append('search', filters.search);
-  if (filters.from) params.append('from', filters.from);
-  if (filters.to) params.append('to', filters.to);
+  if (filters?.category) params.append('category', filters.category);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.from) params.append('from', filters.from);
+  if (filters?.to) params.append('to', filters.to);
 
   return api.get(`/activities?${params.toString()}`);
 };

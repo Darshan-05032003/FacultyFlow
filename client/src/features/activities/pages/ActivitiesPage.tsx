@@ -133,7 +133,10 @@ export const ActivitiesPage = () => {
     setIsFormOpen(true);
   };
 
-  const activities = data?.data?.data || [];
+  const rawActivities = (data as any)?.data;
+  const activities = Array.isArray(rawActivities)
+    ? rawActivities
+    : (Array.isArray(rawActivities?.activities) ? rawActivities.activities : (Array.isArray(data) ? data : []));
 
   return (
     <div className="space-y-6">

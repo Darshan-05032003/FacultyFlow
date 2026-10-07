@@ -21,10 +21,10 @@ export const getPriorities = async (filters?: PrioritizationFilters) => {
   }
 
   const res = await api.get(`/workload/priorities?${params.toString()}`);
-  return res.data;
+  return res;
 };
 
 export const getTopPriorities = async () => {
   const res = await api.get('/workload/priorities/top');
-  return res.data;
+  return res;
 };

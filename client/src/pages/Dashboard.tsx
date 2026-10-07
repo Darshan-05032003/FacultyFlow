@@ -75,8 +75,11 @@ export default function Dashboard() {
   const analytics = analyticsData?.data;
   const forecast = forecastData?.data;
   const priorities = prioritiesData?.data?.tasks || [];
-  const activities = activitiesData?.data?.data || [];
-  const totalActivities = analyticsData?.data?.overview?.activityCount || 0;
+  const rawActivities = (activitiesData as any)?.data;
+  const activities = Array.isArray(rawActivities)
+    ? rawActivities
+    : (Array.isArray(rawActivities?.activities) ? rawActivities.activities : (Array.isArray(activitiesData) ? activitiesData : []));
+  const totalActivities = analyticsData?.data?.overview?.activityCount || activities.length || 0;
 
   const totalHours = analytics ? toHrs(analytics.overview.estimatedMinutes) : 0;
   const pendingCount = priorities.filter((t: any) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED').length;

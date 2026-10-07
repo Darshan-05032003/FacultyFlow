@@ -37,9 +37,11 @@ export const ReportsPage: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    if (!activitiesResponse?.data?.data) return;
-    
-    const activities = activitiesResponse.data.data;
+    const rawActivities = (activitiesResponse as any)?.data;
+    const activities = Array.isArray(rawActivities)
+      ? rawActivities
+      : (Array.isArray(rawActivities?.activities) ? rawActivities.activities : (Array.isArray(activitiesResponse) ? activitiesResponse : []));
+    if (!activities || activities.length === 0) return;
     
     const headers = ['Title', 'Category', 'Status', 'Date', 'Estimated Minutes', 'Actual Minutes', 'Location', 'Course ID'].join(',');
     const rows = activities.map((activity: any) => {
@@ -104,7 +106,7 @@ export const ReportsPage: React.FC = () => {
         <div className="flex space-x-3 mt-1">
           <button
             onClick={handleExportCSV}
-            disabled={isLoadingActivities || !activitiesResponse?.data?.data?.length}
+            disabled={isLoadingActivities || !(activitiesResponse as any)?.data?.length}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 shadow-sm transition-colors"
           >
             <Download className="w-4 h-4" />

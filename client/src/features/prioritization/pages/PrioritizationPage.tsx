@@ -30,7 +30,9 @@ export default function PrioritizationPage() {
     </div>
   );
 
-  if (isError || !data?.data) {
+  const priorityPayload = (data as any)?.data || (data && 'summary' in (data as any) ? data : null);
+
+  if (isError || !priorityPayload) {
     return (
       <div className="space-y-6">
         <PageHeader title="Priority Tasks" />
@@ -39,11 +41,16 @@ export default function PrioritizationPage() {
     );
   }
 
-  const { summary, insights, conflicts, tasks } = data.data;
+  const { 
+    summary = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, OVERDUE: 0, DUE_SOON: 0 }, 
+    insights = [], 
+    conflicts = [], 
+    tasks = [] 
+  } = priorityPayload;
 
   // Split tasks into sections for the UI
-  const overdueTasks = tasks.filter((t: any) => t.isOverdue);
-  const nextRecommended = tasks.filter((t: any) => !t.isOverdue).slice(0, 4); // top 4 not overdue
+  const overdueTasks = (tasks || []).filter((t: any) => t.isOverdue);
+  const nextRecommended = (tasks || []).filter((t: any) => !t.isOverdue).slice(0, 4); // top 4 not overdue
 
   return (
     <div className="space-y-6">

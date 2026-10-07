@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { simulateWorkload, SimulatorAction } from '../api/simulatorApi';
 
 export const WorkloadSimulatorPage: React.FC = () => {
   const [action, setAction] = useState<SimulatorAction>({
     type: 'ADD_ACTIVITY',
-    title: '',
+    title: 'Additional Guest Lecture on Cloud Computing',
     category: 'TEACHING',
-    date: new Date().toISOString().split('T')[0],
-    estimatedMinutes: 60
+    date: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+    estimatedMinutes: 120
   });
 
   const simulatorMutation = useMutation({
     mutationFn: (act: SimulatorAction) => simulateWorkload(act)
   });
+
+  useEffect(() => {
+    simulatorMutation.mutate(action);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

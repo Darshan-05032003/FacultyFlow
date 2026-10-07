@@ -17,5 +17,5 @@ export const getWorkloadAnalytics = async (filters: WorkloadFilters) => {
   if (filters.courseId) params.append('courseId', filters.courseId);
 
   const res = await api.get(`/workload/analytics?${params.toString()}`);
-  return res.data;
+  return res;
 };
