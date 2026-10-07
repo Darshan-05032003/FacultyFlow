@@ -40,7 +40,11 @@ export class DepartmentAnalyticsService {
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = new Date(startDate);
-      if (endDate) where.date.lte = new Date(endDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        if (endDate.length <= 10) end.setHours(23, 59, 59, 999);
+        where.date.lte = end;
+      }
     }
 
     if (category) where.category = category;

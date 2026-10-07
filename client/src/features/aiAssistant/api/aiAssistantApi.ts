@@ -10,5 +10,8 @@ export interface AIResponse {
 
 export const askAssistant = async (message: string): Promise<AIResponse> => {
   const response = await api.post('/ai/assistant', { message });
-  return (response as any).data;
+  const raw = (response as any)?.data;
+  if (raw && 'answer' in raw) return raw;
+  if (response && 'answer' in response) return response as any;
+  return raw || response;
 };

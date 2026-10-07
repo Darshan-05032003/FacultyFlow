@@ -36,7 +36,11 @@ export class ActivityService {
     if (from || to) {
       where.date = {};
       if (from) where.date.gte = new Date(from);
-      if (to) where.date.lte = new Date(to);
+      if (to) {
+        const end = new Date(to);
+        if (to.length <= 10) end.setHours(23, 59, 59, 999);
+        where.date.lte = end;
+      }
     }
 
     if (category) where.category = category;

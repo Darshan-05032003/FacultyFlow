@@ -109,9 +109,9 @@ export default function HodDashboard() {
     );
   }
 
-  const analytics = data?.data;
+  const analytics = (data as any)?.data || (data && 'overview' in (data as any) ? data : null);
 
-  if (!analytics || analytics.overview.facultyCount === 0) {
+  if (!analytics || !analytics.overview || analytics.overview.facultyCount === 0) {
     return (
       <div className="space-y-6">
         <PageHeader title="Department Overview" />

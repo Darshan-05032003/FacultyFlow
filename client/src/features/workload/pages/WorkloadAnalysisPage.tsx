@@ -64,10 +64,10 @@ export function WorkloadAnalysisPage() {
     queryFn: () => getWorkloadAnalytics({ ...appliedFilters, category: filterCategory || undefined }),
   });
 
-  const analytics = data?.data;
+  const analytics = (data as any)?.data || (data && 'overview' in (data as any) ? data : null);
 
   // Metrics
-  const actualHours = analytics ? toHrs(analytics.overview.actualMinutes) : 0;
+  const actualHours = analytics?.overview ? toHrs(analytics.overview.actualMinutes) : 0;
   const completedCount = analytics?.completion?.completedCount || 0;
   const totalCount = analytics?.overview?.activityCount || 0;
   const pendingCount = totalCount - completedCount;
