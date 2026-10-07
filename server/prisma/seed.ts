@@ -60,14 +60,14 @@ async function main() {
     where: { email: 'hod.demo@facultyflow.local' },
     update: {},
     create: {
-      name: 'Dr. Anjali Sharma',
+      name: 'Dr. Darshan Kulkarni',
       email: 'hod.demo@facultyflow.local',
       passwordHash: hash,
       role: Role.HOD,
       facultyProfile: {
         create: {
-          firstName: 'Dr. Anjali',
-          lastName: 'Sharma',
+          firstName: 'Dr. Darshan',
+          lastName: 'Kulkarni',
           designation: 'Head of Department',
           departmentId: ceDept.id,
           employeeId: 'CE-HOD-001',

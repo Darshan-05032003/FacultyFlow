@@ -125,7 +125,6 @@ npm start
 The application comes with seeded demo data, including past and future activities for testing the dashboards and forecast pages. 
 For a full list of available test accounts and their passwords, please refer to [LOGINS.md](file:///home/darshan/Antigravity_projects/Atharva_project/facultyflow/LOGINS.md).
 
-To present a fully populated, pristine environment during presentations without manual data seeding, see the **Demo Mode** guide in [docs/DEMO_MODE.md](file:///home/darshan/Antigravity_projects/Atharva_project/facultyflow/docs/DEMO_MODE.md).
 ## Full Docker Setup (Production-like)
 If you want to run the entire stack (Database, Backend, and Frontend) inside Docker containers:
 
@@ -177,3 +176,4 @@ npm run build
 **PROMPT 10 COMPLETE.** All core faculty requirements, including Reports, Exports, AI Assistant, What-If Simulator, and extensive security hardening, have been verified and finalized.
 
 FINAL PROMPT — NO NEXT IMPLEMENTATION PROMPT REQUIRED.
+\n## Demo Logins\n\nPlease refer to [LOGINS.md](LOGINS.md) for the active demo credentials.\n\n- **HOD:** hod.demo@facultyflow.local (Password: FacultyFlow@123)\n- **Faculty:** faculty.demo@facultyflow.local (Password: FacultyFlow@123)\n

@@ -1,75 +1,151 @@
-import { demoActivities, demoDepartmentAnalytics, demoForecast, demoPriorities, demoSimulatorBaseline } from './demoData';
+import demoData from './demoData.json';
 
-export const isDemoMode = () => {
-  return import.meta.env.VITE_DEMO_MODE === 'true';
-};
+const { activities, departmentFaculty } = demoData;
 
-export async function withDemoFallback<T>(apiCall: () => Promise<T>, demoDataGetter: () => any): Promise<T> {
-  try {
-    const res = await apiCall();
-    if (isDemoMode()) {
-      // If the API returns something empty/falsy, fallback to demo data
-      // For arrays, if length is 0
-      // For objects, if keys length is 0 or if there are explicit 0 metrics
-      
-      // Specifically for facultyflow wrappers where res is { success: true, data: ... }
-      // But the api interceptor unwraps `data`, so `res` is just the payload.
-      // Wait, let's check `api.ts`. It says `response => response.data`. 
-      // So `res` is the `data` object from the server.
-      
-      let isEmpty = false;
-      if (Array.isArray(res) && res.length === 0) isEmpty = true;
-      if (res && typeof res === 'object' && !Array.isArray(res)) {
-        // Analytics overview
-        if ('overview' in res && (res as any).overview?.activityCount === 0) {
-          isEmpty = true;
-        }
-        // Forecast
-        if ('forecasts' in res && ((res as any).forecasts?.length === 0 || !(res as any).forecasts)) {
-          isEmpty = true;
-        }
-        // Priorities
-        if ('tasks' in res && ((res as any).tasks?.length === 0 || !(res as any).tasks)) {
-          isEmpty = true;
-        }
-        // Department
-        if ('departmentWorkloadStatus' in res && (res as any).overview?.activityCount === 0) {
-          isEmpty = true;
-        }
-      }
-
-      if (isEmpty) {
-        console.log("Using DEMO fallback due to empty API response.");
-        return demoDataGetter() as T;
-      }
-    }
-    return res;
-  } catch (error) {
-    if (isDemoMode()) {
-      console.log("Using DEMO fallback due to API error.", error);
-      return demoDataGetter() as T;
-    }
-    throw error;
+export function handleDemoFallback(url: string, params?: any) {
+  if (params) { /* unused */ }
+  if (url.includes('/activities/reports/generate')) {
+    return { data: { success: true } }; // mock report generation
   }
+
+  if (url.includes('/activities/recent') || url.match(/\/activities$/)) {
+    return {
+      success: true,
+      data: {
+        activities: [...activities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        total: activities.length,
+        page: 1,
+        pages: 1
+      }
+    };
+  }
+
+  if (url.includes('/workload/analytics')) {
+    let est = 0;
+    let act = 0;
+    let cnt = 0;
+    const catMap: any = {};
+    const dailyMap: any = {};
+    
+    activities.forEach(a => {
+      est += a.estimatedMinutes;
+      act += a.actualMinutes || a.estimatedMinutes;
+      cnt++;
+      
+      if(!catMap[a.category]) catMap[a.category] = { activityCount: 0, estimatedMinutes: 0, actualMinutes: 0 };
+      catMap[a.category].activityCount++;
+      catMap[a.category].estimatedMinutes += a.estimatedMinutes;
+      catMap[a.category].actualMinutes += (a.actualMinutes || a.estimatedMinutes);
+
+      const d = a.date.split('T')[0];
+      if(!dailyMap[d]) dailyMap[d] = { estimatedMinutes: 0, actualMinutes: 0 };
+      dailyMap[d].estimatedMinutes += a.estimatedMinutes;
+      dailyMap[d].actualMinutes += (a.actualMinutes || a.estimatedMinutes);
+    });
+
+    return {
+      success: true,
+      data: {
+        overview: { activityCount: cnt, estimatedMinutes: est, actualMinutes: act, estimatedHours: est/60, actualHours: act/60 },
+        categoryDistribution: Object.entries(catMap).map(([k,v]: any) => ({ category: k, ...v, percentage: (v.actualMinutes / (act||1))*100 })),
+        dailyWorkload: Object.entries(dailyMap).map(([k,v]: any) => ({ date: k, ...v })).slice(-30),
+        weeklyWorkload: Object.entries(dailyMap).map(([k,v]: any) => ({ week: k, ...v })).slice(-4),
+        heavyDays: [],
+        topContributors: [],
+        completion: { activityRate: 85, workloadRate: 90 },
+        deadlines: { overdueCount: 1, dueTodayCount: 2, dueNext7DaysCount: 4 },
+        statusDistribution: [],
+        workloadStatus: { status: 'NORMAL', utilizationPercent: 85 }
+      }
+    };
+  }
+
+  if (url.includes('/forecast/predict')) {
+    return {
+      success: true,
+      data: {
+        forecasts: [
+          { date: new Date().toISOString().split('T')[0], predictedMinutes: 240, confidenceLevel: 'HIGH', factors: ['Recent trend'] },
+          { date: new Date(Date.now() + 86400000).toISOString().split('T')[0], predictedMinutes: 180, confidenceLevel: 'MEDIUM', factors: [] },
+          { date: new Date(Date.now() + 86400000*2).toISOString().split('T')[0], predictedMinutes: 300, confidenceLevel: 'MEDIUM', factors: [] }
+        ],
+        summary: {
+          averageDailyMinutes: 240,
+          totalPredictedMinutes: 720,
+          trendDirection: 'STABLE',
+          riskLevel: 'MODERATE'
+        },
+        categoryBreakdown: [
+          { category: 'TEACHING', predictedMinutes: 360, percentage: 50 },
+          { category: 'RESEARCH', predictedMinutes: 180, percentage: 25 },
+          { category: 'EVALUATION', predictedMinutes: 180, percentage: 25 }
+        ],
+        recommendations: [
+          'Balance your teaching load next week.',
+          'You have a lot of evaluation coming up.'
+        ]
+      }
+    };
+  }
+
+  if (url.includes('/priorities/recommend')) {
+    return {
+      success: true,
+      data: {
+        tasks: activities.slice(0, 10).map((a, i) => ({
+          id: a.id,
+          activityId: a.id,
+          title: a.title,
+          category: a.category,
+          deadline: a.deadline,
+          estimatedMinutes: a.estimatedMinutes,
+          priorityScore: i < 2 ? 80 : (i < 5 ? 50 : 20),
+          priorityLevel: i < 2 ? 'HIGH' : (i < 5 ? 'MEDIUM' : 'LOW'),
+          reasoning: 'Upcoming deadline and high effort required.'
+        }))
+      }
+    };
+  }
+
+  if (url.includes('/department/analytics')) {
+    return {
+      success: true,
+      data: {
+        department: { id: 'd1', name: 'Computer Engineering' },
+        overview: { facultyCount: 10, activeFacultyCount: 10, activityCount: 430, estimatedMinutes: 25000, actualMinutes: 25050, actualHours: 417, variancePercent: 0.2 },
+        facultyBreakdown: departmentFaculty,
+        overloadedFaculty: departmentFaculty.filter(f => f.workloadStatus === 'OVERLOADED' || f.workloadStatus === 'HIGH'),
+        distributionStats: { averageActualMinutes: 2500, minActualMinutes: 1900, maxActualMinutes: 3500 },
+        categoryDistribution: [
+           { category: 'TEACHING', actualMinutes: 10000, percentage: 40 },
+           { category: 'RESEARCH', actualMinutes: 5000, percentage: 20 },
+           { category: 'EVALUATION', actualMinutes: 4000, percentage: 16 }
+        ],
+        dailyWorkload: [],
+        weeklyWorkload: [],
+        heavyDays: [],
+        departmentWorkloadStatus: { status: 'NORMAL', utilizationPercent: 85 },
+        deadlinePressure: { overdueCount: 11, dueTodayCount: 5, dueNext7DaysCount: 15 },
+        topContributors: departmentFaculty.slice(0, 5)
+      }
+    };
+  }
+
+  if (url.includes('/simulator/evaluate')) {
+    return {
+      success: true,
+      data: {
+        baseline: { totalMinutes: 2400, utilizationPercent: 85, status: 'NORMAL' },
+        simulated: { totalMinutes: 2520, utilizationPercent: 90, status: 'NORMAL' },
+        difference: { totalMinutes: 120, utilizationPercent: 5 },
+        riskAssessment: {
+          level: 'MODERATE',
+          warnings: ['This brings you close to the upper limit of optimal workload.'],
+          recommendations: ['Consider delegating lower priority tasks.']
+        }
+      }
+    };
+  }
+
+  return null;
 }
-
-export const DemoService = {
-  getActivities: () => {
-    return { data: demoActivities };
-  },
-  getAnalytics: () => {
-    return demoDepartmentAnalytics.faculty; // We will store pre-computed analytics in demoData
-  },
-  getDepartmentAnalytics: () => {
-    return demoDepartmentAnalytics.hod;
-  },
-  getForecast: () => {
-    return demoForecast;
-  },
-  getPriorities: () => {
-    return demoPriorities;
-  },
-  getSimulatorBaseline: () => {
-    return demoSimulatorBaseline;
-  }
-};

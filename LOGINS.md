@@ -19,5 +19,4 @@ Department: Computer Engineering
 ## Notes
 
 These credentials are DEMO/LOCAL credentials only.
-
 They must never be used in production.
