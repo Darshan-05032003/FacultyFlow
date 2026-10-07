@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, CheckCircle2, X, Calendar, Clock } from 'lucide-react';
 import { getActivities, createActivity, updateActivity, deleteActivity, updateActivityStatus } from '../api/activities';
 import { PageHeader, StatusBadge, PriorityBadge, SectionCard, LoadingState, EmptyState } from '../../../components/ui/SharedComponents';
-import { cn } from '../../../lib/utils';
 
 const CATEGORIES = [
   { value: 'TEACHING', label: 'Teaching' },

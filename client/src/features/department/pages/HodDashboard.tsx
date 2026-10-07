@@ -4,67 +4,107 @@ import {
   LineChart, Line, Legend
 } from 'recharts';
 import { 
-  Users, Clock, AlertTriangle, Calendar as CalendarIcon, 
-  Loader2, Activity, TrendingUp, Filter
+  Users, Clock, AlertTriangle, CheckCircle
 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { getDepartmentAnalytics } from '../api/departmentAnalytics';
+import { PageHeader, MetricCard, SectionCard, FilterBar, StatusBadge, LoadingState, ErrorState, EmptyState } from '../../../components/ui/SharedComponents';
+import { cn } from '../../../lib/utils';
 
 const ActivityCategoryLabels: Record<string, string> = {
-  TEACHING: 'Teaching',
-  LAB: 'Lab',
-  PREPARATION: 'Preparation',
-  EVALUATION: 'Evaluation',
-  MENTORING: 'Mentoring',
-  PROJECT_SUPERVISION: 'Project Supervision',
-  MEETING: 'Meeting',
-  ADMINISTRATION: 'Administration',
-  RESEARCH: 'Research',
-  OTHER: 'Other',
+  TEACHING: 'Teaching', LAB: 'Lab', PREPARATION: 'Preparation', EVALUATION: 'Evaluation',
+  MENTORING: 'Mentoring', PROJECT_SUPERVISION: 'Project Supervision', MEETING: 'Meeting',
+  ADMINISTRATION: 'Administration', RESEARCH: 'Research', OTHER: 'Other',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  LOW: 'text-blue-600 dark:text-blue-400 bg-blue-500/10',
-  NORMAL: 'text-green-600 dark:text-green-400 bg-green-500/10',
-  HIGH: 'text-orange-600 dark:text-orange-400 bg-orange-500/10',
-  OVERLOADED: 'text-red-600 dark:text-red-400 bg-red-500/10',
-};
+const PERIODS = [
+  { value: 'this-month', label: 'This Month' },
+  { value: 'last-month', label: 'Last Month' },
+  { value: 'last-3-months', label: 'Last 3 Months' },
+  { value: 'custom', label: 'Custom' },
+];
 
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={cn("bg-background rounded-xl border shadow-sm p-6", className)}>
-      {children}
-    </div>
-  );
+function getPeriodDates(period: string) {
+  const now = new Date();
+  const start = new Date();
+  if (period === 'this-month') {
+    start.setDate(1);
+  } else if (period === 'last-month') {
+    start.setMonth(start.getMonth() - 1, 1);
+    now.setDate(0);
+  } else if (period === 'last-3-months') {
+    start.setMonth(start.getMonth() - 3, 1);
+  }
+  return {
+    startDate: start.toISOString().split('T')[0],
+    endDate: now.toISOString().split('T')[0],
+  };
 }
 
 export default function HodDashboard() {
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: '',
-  });
-
+  const [period, setPeriod] = useState('this-month');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState(() => getPeriodDates('this-month'));
   const [trendView, setTrendView] = useState<'daily' | 'weekly'>('weekly');
 
+  const handleApply = () => {
+    if (period === 'custom') {
+      setAppliedFilters({ startDate: customStart, endDate: customEnd });
+    } else {
+      setAppliedFilters(getPeriodDates(period));
+    }
+  };
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['departmentAnalytics', dateRange.startDate, dateRange.endDate],
-    queryFn: () => getDepartmentAnalytics(dateRange),
+    queryKey: ['departmentAnalytics', appliedFilters.startDate, appliedFilters.endDate],
+    queryFn: () => getDepartmentAnalytics(appliedFilters),
     retry: false
   });
 
-  if (isLoading) {
-    return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  }
+  const filterFields = [
+    {
+      label: 'Period',
+      className: 'min-w-[160px]',
+      children: (
+        <select value={period} onChange={e => setPeriod(e.target.value)} className="filter-select">
+          {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+        </select>
+      ),
+    },
+    {
+      label: 'From Date',
+      className: 'min-w-[140px]',
+      children: (
+        <input type="date" value={period === 'custom' ? customStart : appliedFilters.startDate}
+          onChange={e => { setPeriod('custom'); setCustomStart(e.target.value); }}
+          className="filter-input" />
+      ),
+    },
+    {
+      label: 'To Date',
+      className: 'min-w-[140px]',
+      children: (
+        <input type="date" value={period === 'custom' ? customEnd : appliedFilters.endDate}
+          onChange={e => { setPeriod('custom'); setCustomEnd(e.target.value); }}
+          className="filter-input" />
+      ),
+    },
+  ];
+
+  if (isLoading) return (
+    <div className="space-y-6">
+      <PageHeader title="Department Overview" />
+      <LoadingState message="Loading department analytics..." />
+    </div>
+  );
 
   if (isError) {
     const message = (error as any)?.response?.data?.message || 'Failed to load department analytics. Are you sure you are a Head of Department?';
     return (
-      <div className="flex h-[50vh] items-center justify-center text-red-500">
-        <div className="text-center">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p className="font-semibold">{message}</p>
-        </div>
+      <div className="space-y-6">
+        <PageHeader title="Department Overview" />
+        <ErrorState message={message} />
       </div>
     );
   }
@@ -73,236 +113,198 @@ export default function HodDashboard() {
 
   if (!analytics || analytics.overview.facultyCount === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-        <Users className="w-16 h-16 text-muted-foreground/50" />
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">No department data</h2>
-        <p className="text-muted-foreground">Your department currently has no active faculty or workload data.</p>
+      <div className="space-y-6">
+        <PageHeader title="Department Overview" />
+        <EmptyState icon={<Users />} title="No department data" description="Your department currently has no active faculty or workload data." />
       </div>
     );
   }
 
   const { 
     department, overview, facultyBreakdown, overloadedFaculty, 
-    categoryDistribution, dailyWorkload, weeklyWorkload,
-    departmentWorkloadStatus, deadlinePressure 
+    categoryDistribution, dailyWorkload, weeklyWorkload
   } = analytics;
 
   const totalHours = Math.round(overview.estimatedHours * 10) / 10;
-  const completedHours = Math.round(overview.actualHours * 10) / 10;
-  const variance = Math.round(overview.varianceMinutes / 60 * 10) / 10;
-  const varianceSign = variance > 0 ? '+' : '';
 
   const trendData = trendView === 'daily' 
-    ? dailyWorkload.map((d: any) => ({ name: d.date, planned: Math.round(d.estimatedMinutes/60*10)/10, actual: Math.round(d.actualMinutes/60*10)/10 }))
-    : weeklyWorkload.map((w: any) => ({ name: w.week, planned: Math.round(w.estimatedMinutes/60*10)/10, actual: Math.round(w.actualMinutes/60*10)/10 }));
+    ? dailyWorkload.map((d: any) => ({ name: new Date(d.date).toLocaleDateString(undefined, {month:'short', day:'numeric'}), planned: Math.round(d.estimatedMinutes/60*10)/10, actual: Math.round(d.actualMinutes/60*10)/10 }))
+    : weeklyWorkload.map((w: any) => ({ name: w.week?.slice(-5), planned: Math.round(w.estimatedMinutes/60*10)/10, actual: Math.round(w.actualMinutes/60*10)/10 }));
 
   const categoryBarData = categoryDistribution.map((c: any) => ({
     name: ActivityCategoryLabels[c.category] || c.category,
-    hours: Math.round(c.actualHours * 10) / 10 || Math.round(c.estimatedHours * 10) / 10
-  })).filter((c: any) => c.hours > 0).sort((a: any, b: any) => b.hours - a.hours);
+    hours: Math.round((c.actualMinutes || c.estimatedMinutes) / 60 * 10) / 10
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">HOD Dashboard: {department.name}</h1>
-          <p className="text-muted-foreground mt-1">Department-wide workload visibility and analytics.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white dark:bg-gray-800 border rounded-md px-3 py-1.5 shadow-sm text-sm">
-            <Filter className="w-4 h-4 mr-2 text-gray-400" />
-            <input 
-              type="date" 
-              value={dateRange.startDate}
-              onChange={e => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              className="bg-transparent border-none outline-none dark:text-white"
-            />
-            <span className="mx-2 text-gray-400">to</span>
-            <input 
-              type="date" 
-              value={dateRange.endDate}
-              onChange={e => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              className="bg-transparent border-none outline-none dark:text-white"
-            />
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title={`${department.name} Overview`}
+        subtitle="Department workload, faculty status, and performance metrics."
+      />
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Users className="w-4 h-4" /> Faculty</p>
-            <h3 className="text-2xl font-bold">{overview.activeFacultyCount}</h3>
-            <p className="text-xs text-muted-foreground">Active members</p>
-          </div>
-        </Card>
-        <Card className="lg:col-span-2">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Dept Actual Workload</p>
-            <h3 className="text-2xl font-bold">{completedHours} hrs</h3>
-            <p className="text-xs text-muted-foreground">Planned: {totalHours} hrs</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><TrendingUp className="w-4 h-4 text-orange-500" /> Variance</p>
-            <h3 className="text-2xl font-bold">{varianceSign}{variance} hrs</h3>
-            <p className="text-xs text-muted-foreground">{Math.round(overview.variancePercent)}% difference</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-blue-500" /> Pressure</p>
-            <h3 className="text-2xl font-bold">{deadlinePressure.dueTodayCount + deadlinePressure.dueNext7DaysCount}</h3>
-            <p className="text-xs text-red-500">{deadlinePressure.overdueCount} overdue dept tasks</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Activity className="w-4 h-4" /> Dept Status</p>
-            <h3 className={cn("text-lg font-bold mt-1 px-2 py-0.5 rounded-md inline-block w-max", STATUS_COLORS[departmentWorkloadStatus.status])}>
-              {departmentWorkloadStatus.status}
-            </h3>
-            <p className="text-xs text-muted-foreground">{Math.round(departmentWorkloadStatus.utilizationPercent)}% capacity</p>
-          </div>
-        </Card>
+      <FilterBar fields={filterFields} onApply={handleApply} isLoading={isLoading} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Faculty"
+          value={overview.facultyCount}
+          subtitle="Active members"
+          icon={<Users className="w-6 h-6 text-blue-600" />}
+          iconBg="bg-blue-100"
+        />
+        <MetricCard
+          title="Total Planned Hours"
+          value={totalHours}
+          subtitle="Department capacity"
+          icon={<Clock className="w-6 h-6 text-purple-600" />}
+          iconBg="bg-purple-100"
+        />
+        <MetricCard
+          title="Avg Completion Rate"
+          value={`${Math.round(overview.averageCompletionRate)}%`}
+          subtitle="Overall performance"
+          icon={<CheckCircle className="w-6 h-6 text-green-600" />}
+          iconBg="bg-green-100"
+        />
+        <MetricCard
+          title="Overloaded Faculty"
+          value={overloadedFaculty.length}
+          subtitle="Requires attention"
+          icon={<AlertTriangle className="w-6 h-6 text-red-600" />}
+          iconBg="bg-red-100"
+        />
       </div>
 
       {overloadedFaculty.length > 0 && (
-        <Card className="border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20">
-          <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5" />
-            Faculty Requiring Attention
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <h3 className="text-lg font-semibold text-red-800">Faculty Requiring Attention</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {overloadedFaculty.map((f: any) => (
-              <div key={f.facultyId} className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
-                <p className="font-semibold">{f.name}</p>
+              <div key={f.facultyId} className="bg-white rounded-lg border border-red-100 shadow-sm p-4">
+                <p className="font-semibold text-gray-900">{f.name}</p>
                 <div className="flex justify-between items-center mt-2 text-sm">
-                  <span className="text-muted-foreground">Workload:</span>
-                  <span className="font-medium">{Math.round(f.actualHours * 10)/10} hrs</span>
+                  <span className="text-gray-500">Workload:</span>
+                  <span className="font-medium text-gray-900">{Math.round(f.actualHours * 10)/10} hrs</span>
                 </div>
                 <div className="flex justify-between items-center mt-1 text-sm">
-                  <span className="text-muted-foreground">Utilization:</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">{Math.round(f.utilizationPercent)}%</span>
+                  <span className="text-gray-500">Utilization:</span>
+                  <span className="font-medium text-red-600">{Math.round(f.utilizationPercent)}%</span>
                 </div>
                 {f.overdueCount > 0 && (
                   <div className="flex justify-between items-center mt-1 text-sm">
-                    <span className="text-muted-foreground">Overdue:</span>
-                    <span className="font-medium text-red-600 dark:text-red-400">{f.overdueCount} tasks</span>
+                    <span className="text-gray-500">Overdue:</span>
+                    <span className="font-medium text-red-600">{f.overdueCount} tasks</span>
                   </div>
                 )}
-                <div className={cn("mt-3 text-xs font-bold px-2 py-1 rounded w-max", STATUS_COLORS[f.workloadStatus])}>
-                  {f.workloadStatus}
+                <div className="mt-3">
+                  <StatusBadge status={f.workloadStatus} />
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Faculty Workload Table */}
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Faculty Workload Breakdown</h3>
+      <SectionCard title="Faculty Workload Breakdown" noPadding>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+          <table className="w-full data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3 rounded-tl-lg">Faculty Member</th>
-                <th className="px-4 py-3">Activities</th>
-                <th className="px-4 py-3">Planned (hrs)</th>
-                <th className="px-4 py-3">Actual (hrs)</th>
-                <th className="px-4 py-3">Variance</th>
-                <th className="px-4 py-3">Completion</th>
-                <th className="px-4 py-3">Utilization</th>
-                <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                <th>Faculty Member</th>
+                <th className="text-right">Activities</th>
+                <th className="text-right">Planned (hrs)</th>
+                <th className="text-right">Actual (hrs)</th>
+                <th className="text-right">Variance</th>
+                <th>Completion</th>
+                <th className="text-right">Utilization</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {facultyBreakdown.map((f: any) => (
-                <tr key={f.facultyId} className="border-b last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium">
-                    {f.name}
-                    {f.employeeId && <span className="block text-xs text-muted-foreground">{f.employeeId}</span>}
+                <tr key={f.facultyId}>
+                  <td className="font-medium text-gray-900">
+                    <span className="line-clamp-1">{f.name}</span>
+                    {f.employeeId && <span className="block text-xs text-gray-500 font-normal">{f.employeeId}</span>}
                   </td>
-                  <td className="px-4 py-3">{f.activityCount}</td>
-                  <td className="px-4 py-3">{Math.round((f.estimatedMinutes/60) * 10)/10}</td>
-                  <td className="px-4 py-3 font-semibold">{Math.round(f.actualHours * 10)/10}</td>
-                  <td className="px-4 py-3">
-                    <span className={f.varianceMinutes > 0 ? 'text-orange-500' : 'text-green-500'}>
-                      {f.varianceMinutes > 0 ? '+' : ''}{Math.round((f.varianceMinutes/60) * 10)/10}
-                    </span>
+                  <td className="text-right text-gray-600">{f.activityCount}</td>
+                  <td className="text-right text-gray-600">{Math.round((f.estimatedMinutes/60) * 10)/10}</td>
+                  <td className="text-right font-medium text-gray-900">{Math.round(f.actualHours * 10)/10}</td>
+                  <td className={`text-right font-semibold ${f.varianceMinutes > 0 ? 'text-red-600' : f.varianceMinutes < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                    {f.varianceMinutes > 0 ? '+' : ''}{Math.round((f.varianceMinutes/60) * 10)/10}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${Math.min(100, f.completionRate)}%` }} />
+                      <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, f.completionRate)}%` }} />
                       </div>
-                      <span className="text-xs">{Math.round(f.completionRate)}%</span>
+                      <span className="text-xs text-gray-600">{Math.round(f.completionRate)}%</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">{Math.round(f.utilizationPercent)}%</td>
-                  <td className="px-4 py-3">
-                    <span className={cn("text-xs font-bold px-2 py-1 rounded-md", STATUS_COLORS[f.workloadStatus])}>
-                      {f.workloadStatus}
-                    </span>
+                  <td className="text-right text-gray-600">{Math.round(f.utilizationPercent)}%</td>
+                  <td>
+                    <StatusBadge status={f.workloadStatus} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </Card>
+      </SectionCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">Department Trend</h3>
-            <div className="flex bg-muted p-1 rounded-md">
+        <SectionCard 
+          title="Department Trend"
+          headerRight={
+            <div className="flex bg-gray-100 p-1 rounded-md">
               <button 
                 onClick={() => setTrendView('daily')}
-                className={cn("px-3 py-1 text-xs font-medium rounded-sm", trendView === 'daily' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+                className={cn("px-3 py-1 text-xs font-medium rounded", trendView === 'daily' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700')}
               >
                 Daily
               </button>
               <button 
                 onClick={() => setTrendView('weekly')}
-                className={cn("px-3 py-1 text-xs font-medium rounded-sm", trendView === 'weekly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+                className={cn("px-3 py-1 text-xs font-medium rounded", trendView === 'weekly' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700')}
               >
                 Weekly
               </button>
             </div>
-          </div>
+          }
+        >
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <RechartsTooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <RechartsTooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
                 <Legend verticalAlign="top" height={36}/>
-                <Line type="monotone" dataKey="planned" name="Planned (hrs)" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="actual" name="Actual (hrs)" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="actual" name="Actual (hrs)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="planned" name="Planned (hrs)" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </SectionCard>
 
-        <Card>
-          <h3 className="text-lg font-semibold mb-6">Category Distribution (Hours)</h3>
+        <SectionCard title="Category Distribution (Hours)">
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryBarData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={100} />
-                <RechartsTooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
-                <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+              <BarChart data={categoryBarData} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#475569' }} width={110} />
+                <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                <Bar dataKey="hours" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </SectionCard>
       </div>
     </div>
   );

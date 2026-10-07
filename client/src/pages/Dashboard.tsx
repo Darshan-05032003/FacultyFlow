@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LineChart, Line
+  PieChart, Pie, Cell, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 import { 
   Clock, CheckCircle, Calendar, AlertTriangle,
@@ -15,7 +13,6 @@ import { getActivities } from '../features/activities/api/activities';
 import { useAuth } from '../features/auth/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { MetricCard, SectionCard, StatusBadge, PriorityBadge, EmptyState } from '../components/ui/SharedComponents';
-import { cn } from '../lib/utils';
 
 const CHART_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'];
 

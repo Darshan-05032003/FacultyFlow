@@ -108,10 +108,11 @@ npm install
 ```bash
 docker compose up db -d
 ```
-3. **Run Database Migrations** (Applies the schema to the database):
+3. **Run Database Migrations & Seeding** (Applies the schema and loads demo data):
 ```bash
 cd server
 npx prisma db push
+npm run db:seed
 cd ..
 ```
 4. **Start the Application**:
@@ -119,6 +120,10 @@ cd ..
 npm start
 ```
 *This will concurrently start the backend on port `5000` and the frontend on port `5173`.*
+
+## Test Accounts & Demo Data
+The application comes with seeded demo data, including past and future activities for testing the dashboards and forecast pages. 
+For a full list of available test accounts and their passwords, please refer to [LOGINS.md](file:///home/darshan/Antigravity_projects/Atharva_project/facultyflow/LOGINS.md).
 
 ## Full Docker Setup (Production-like)
 If you want to run the entire stack (Database, Backend, and Frontend) inside Docker containers:

@@ -12,12 +12,31 @@ import ForecastPage from './features/forecast/pages/ForecastPage';
 import PrioritizationPage from './features/prioritization/pages/PrioritizationPage';
 import { WorkloadSimulatorPage } from './features/simulator/pages/WorkloadSimulatorPage';
 import { ReportsPage } from './features/reports/pages/ReportsPage';
+import WorkloadAnalysisPage from './features/workload/pages/WorkloadAnalysisPage';
 
-// Placeholder Pages
-const Calendar = () => <div className="p-6">Calendar Page</div>;
-const Workload = () => <div className="p-6">Workload Page</div>;
-const Analytics = () => <div className="p-6">Analytics Page</div>;
-const Notifications = () => <div className="p-6">Notifications Page</div>;
+const Calendar = () => (
+  <div className="flex items-center justify-center h-64 text-gray-400">
+    <div className="text-center">
+      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span className="text-3xl">📅</span>
+      </div>
+      <p className="font-semibold text-gray-600">Calendar Page</p>
+      <p className="text-sm text-gray-400 mt-1">Coming soon</p>
+    </div>
+  </div>
+);
+
+const Notifications = () => (
+  <div className="flex items-center justify-center h-64 text-gray-400">
+    <div className="text-center">
+      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span className="text-3xl">🔔</span>
+      </div>
+      <p className="font-semibold text-gray-600">Notifications</p>
+      <p className="text-sm text-gray-400 mt-1">No new notifications</p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
@@ -33,10 +52,10 @@ function App() {
           <Route path="priorities" element={<PrioritizationPage />} />
           <Route path="activities" element={<ActivitiesPage />} />
           <Route path="calendar" element={<Calendar />} />
-          <Route path="workload" element={<Workload />} />
+          <Route path="workload" element={<WorkloadAnalysisPage />} />
           <Route path="forecast" element={<ForecastPage />} />
           <Route path="simulator" element={<WorkloadSimulatorPage />} />
-          <Route path="analytics" element={<Analytics />} />
+          <Route path="analytics" element={<WorkloadAnalysisPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="settings" element={<SettingsPage />} />

@@ -33,7 +33,7 @@ app.use(limiter);
 
 // Parse Middlewares
 app.use(cors({
-  origin: env.CLIENT_URL,
+  origin: [env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'],
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
