@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------
+// USERS & FACULTY
+// --------------------------------------------------
+
+model User {
+  id             String          @id @default(uuid())
+  name           String?
+  email          String          @unique
+  passwordHash   String
+  role           Role            @default(FACULTY)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  facultyProfile FacultyProfile?
+}
+
+enum Role {
+  FACULTY
+  HOD
+  ADMIN
+}
+
+model FacultyProfile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId   String?     @unique
+  firstName      String
+  lastName       String
+  departmentId   String?
+  department     Department? @relation(name: "DepartmentFaculty", fields: [departmentId], references: [id])
+  designation    String?
+  joinDate       DateTime?
+  phone          String?
+  officeLocation String?
+  bio            String?
+  activities   Activity[]
+  tasks        Task[]
+  meetings     Meeting[]
+  hodOf        Department? @relation(name: "DepartmentHOD")
+}
+
+model Department {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  code      String           @unique
+  hodId     String?          @unique
+  hod       FacultyProfile?  @relation(name: "DepartmentHOD", fields: [hodId], references: [id])
+  faculty   FacultyProfile[] @relation(name: "DepartmentFaculty")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+// --------------------------------------------------
+// ACADEMIC & COURSES
+// --------------------------------------------------
+
+model AcademicTerm {
+  id          String             @id @default(uuid())
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  assignments CourseAssignment[]
+}
+
+model Course {
+  id          String             @id @default(uuid())
+  code        String             @unique
+  name        String
+  credits     Int
+  assignments CourseAssignment[]
+  activities  Activity[]
+}
+
+model CourseAssignment {
+  id        String       @id @default(uuid())
+  courseId  String
+  course    Course       @relation(fields: [courseId], references: [id])
+  termId    String
+  term      AcademicTerm @relation(fields: [termId], references: [id])
+  schedules Schedule[]
+}
+
+model Schedule {
+  id                 String           @id @default(uuid())
+  courseAssignmentId String
+  courseAssignment   CourseAssignment @relation(fields: [courseAssignmentId], references: [id])
+  dayOfWeek          Int
+  startTime          String
+  endTime            String
+}
+
+// --------------------------------------------------
+// ACTIVITIES & TASKS
+// --------------------------------------------------
+
+model Activity {
+  id               String           @id @default(uuid())
+  title            String
+  description      String?
+  category         ActivityCategory
+  facultyProfileId String
+  facultyProfile   FacultyProfile   @relation(fields: [facultyProfileId], references: [id])
+  date             DateTime
+  estimatedMinutes Int?
+  actualMinutes    Int?
+  deadline         DateTime?
+  status           ActivityStatus   @default(PLANNED)
+  courseId         String?
+  course           Course?          @relation(fields: [courseId], references: [id])
+  isRecurring      Boolean          @default(false)
+  recurrenceType   RecurrenceType   @default(NONE)
+  recurrenceEndDate DateTime?
+  isArchived       Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ActivityCategory {
+  TEACHING
+  LABORATORY
+  LAB
+  PREPARATION
+  EVALUATION
+  MENTORING
+  SUPERVISION
+  PROJECT_SUPERVISION
+  MEETING
+  DEPARTMENT_DUTY
+  ADMINISTRATION
+  RESEARCH
+  OTHER
+}
+
+model Task {
+  id               String         @id @default(uuid())
+  title            String
+  description      String?
+  status           TaskStatus     @default(PENDING)
+  facultyProfileId String
+  facultyProfile   FacultyProfile @relation(fields: [facultyProfileId], references: [id])
+  deadlineId       String?        @unique
+  deadline         Deadline?      @relation(fields: [deadlineId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model TaskDependency {
+  id String @id @default(uuid())
+  // Basic relationship established; further refinement needed later
+}
+
+model Deadline {
+  id   String   @id @default(uuid())
+  date DateTime
+  task Task?
+}
+
+model Meeting {
+  id               String         @id @default(uuid())
+  title            String
+  date             DateTime
+  durationMinutes  Int
+  facultyProfileId String
+  facultyProfile   FacultyProfile @relation(fields: [facultyProfileId], references: [id])
+}
+
+// --------------------------------------------------
+// WORKLOAD & ANALYTICS
+// --------------------------------------------------
+
+model WorkloadEntry {
+  id          String   @id @default(uuid())
+  date        DateTime
+  hours       Float
+  description String?
+}
+
+model WorkloadSnapshot {
+  id         String   @id @default(uuid())
+  date       DateTime
+  totalHours Float
+}
+
+model Forecast {
+  id             String   @id @default(uuid())
+  generatedDate  DateTime @default(now())
+  predictedHours Float
+}
+
+// --------------------------------------------------
+// SYSTEM
+// --------------------------------------------------
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  title       String
+  generatedAt DateTime @default(now())
+}
