@@ -1,33 +1,23 @@
-# FacultyFlow Seeded Logins
+# FacultyFlow Demo Logins
 
-This document contains the seeded test accounts available in the database for local development and demonstration purposes.
+## Faculty Demo
 
-All passwords are set to **`FacultyFlow@123`**.
+Email: faculty.demo@facultyflow.local
+Password: FacultyFlow@123
+Role: FACULTY
+Name: Prof. Rahul Mehta
+Department: Computer Engineering
 
-## Admin Role
+## HOD Demo
 
-| Name        | Email                            | Password          | Role  |
-| ----------- | -------------------------------- | ----------------- | ----- |
-| System Admin| admin.demo@facultyflow.local     | FacultyFlow@123   | ADMIN |
+Email: hod.demo@facultyflow.local
+Password: FacultyFlow@123
+Role: HOD
+Name: Dr. Darshan Kulkarni
+Department: Computer Engineering
 
-## Head of Department (HOD) Role
+## Notes
 
-| Name             | Email                          | Password          | Role | Department |
-| ---------------- | ------------------------------ | ----------------- | ---- | ---------- |
-| Dr. Anjali Sharma| hod.demo@facultyflow.local     | FacultyFlow@123   | HOD  | Computer Engineering (CE) |
+These credentials are DEMO/LOCAL credentials only.
 
-## Faculty Role (Computer Engineering)
-
-| Name             | Email                            | Password          | Role    | Department |
-| ---------------- | -------------------------------- | ----------------- | ------- | ---------- |
-| Prof. Rahul Mehta| faculty.demo@facultyflow.local   | FacultyFlow@123   | FACULTY | Computer Engineering (CE) |
-| Prof. Priya Patel| faculty2.demo@facultyflow.local  | FacultyFlow@123   | FACULTY | Computer Engineering (CE) |
-
-## Faculty Role (Information Technology)
-
-| Name             | Email                            | Password          | Role    | Department |
-| ---------------- | -------------------------------- | ----------------- | ------- | ---------- |
-| Prof. Vijay Kumar| faculty3.demo@facultyflow.local  | FacultyFlow@123   | FACULTY | Information Technology (IT) |
-
-## Usage
-When running the frontend (`npm run dev` in `/client`), use any of the emails above with the password `FacultyFlow@123` to log in and view role-specific dashboards and data.
+They must never be used in production.

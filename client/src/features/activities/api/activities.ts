@@ -1,14 +1,17 @@
 import api from '../../../lib/api';
+import { DemoService, withDemoFallback } from '../../../demo/demoDataService';
 
 export const getActivities = async (filters: any) => {
-  const params = new URLSearchParams();
-  if (filters.category) params.append('category', filters.category);
-  if (filters.status) params.append('status', filters.status);
-  if (filters.search) params.append('search', filters.search);
-  if (filters.from) params.append('from', filters.from);
-  if (filters.to) params.append('to', filters.to);
+  return withDemoFallback(async () => {
+    const params = new URLSearchParams();
+    if (filters.category) params.append('category', filters.category);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
 
-  return api.get(`/activities?${params.toString()}`);
+    return api.get(`/activities?${params.toString()}`);
+  }, DemoService.getActivities);
 };
 
 export const createActivity = async (data: any) => {
