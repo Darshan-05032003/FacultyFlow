@@ -157,6 +157,32 @@ async function main() {
     include: { facultyProfile: true },
   });
 
+  // Additional Faculties for Data Heavy HOD Dashboard
+  const extraFaculties = [];
+  for (let i = 4; i <= 8; i++) {
+    const fac = await prisma.user.upsert({
+      where: { email: `faculty${i}.demo@facultyflow.local` },
+      update: {},
+      create: {
+        name: `Prof. Demo Faculty ${i}`,
+        email: `faculty${i}.demo@facultyflow.local`,
+        passwordHash: hash,
+        role: Role.FACULTY,
+        facultyProfile: {
+          create: {
+            firstName: `Prof. Demo`,
+            lastName: `Faculty ${i}`,
+            designation: 'Assistant Professor',
+            departmentId: ceDept.id, // Adding to CE to make HOD Dashboard rich
+            employeeId: `CE-FAC-00${i}`,
+          },
+        },
+      },
+      include: { facultyProfile: true },
+    });
+    extraFaculties.push(fac);
+  }
+
   console.log('  ✅ Users created');
 
   // --------------------------------------------------
@@ -167,6 +193,7 @@ async function main() {
     { profile: faculty1.facultyProfile!, label: 'Faculty1' },
     { profile: faculty2.facultyProfile!, label: 'Faculty2' },
     { profile: faculty3.facultyProfile!, label: 'Faculty3' },
+    ...extraFaculties.map((f, i) => ({ profile: f.facultyProfile!, label: `Faculty${i + 4}` })),
   ];
 
   const categories: { category: ActivityCategory; est: number; label: string }[] = [
@@ -201,8 +228,8 @@ async function main() {
     if (dayOfWeek === 0) continue;
 
     for (const fac of faculties) {
-      // How many activities per day
-      const activitiesPerDay = dayOfWeek === 6 ? 1 : Math.floor(Math.random() * 3) + 2;
+      // How many activities per day: 3 to 6 on weekdays to make it data heavy
+      const activitiesPerDay = dayOfWeek === 6 ? 2 : Math.floor(Math.random() * 4) + 3;
 
       for (let i = 0; i < activitiesPerDay; i++) {
         const template = categories[Math.floor(Math.random() * categories.length)];
@@ -235,7 +262,8 @@ async function main() {
     if (date.getDay() === 0) continue;
 
     for (const fac of faculties) {
-      const activitiesPerDay = date.getDay() === 6 ? 1 : Math.floor(Math.random() * 2) + 1;
+      // 3 to 6 activities per day for future as well
+      const activitiesPerDay = date.getDay() === 6 ? 2 : Math.floor(Math.random() * 4) + 3;
       for (let i = 0; i < activitiesPerDay; i++) {
         const template = categories[Math.floor(Math.random() * categories.length)];
         const est = template.est + Math.floor(Math.random() * 20) - 10;
